@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="pt-BR" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Despensa & Cardápio</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+  
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+  <style>
+    * { font-family: 'Nunito', sans-serif; }
+    .status-none { background: #ffffff; border-color: #f1f5f9; }
+    .status-need { background: #fffbeb; border-color: #fde68a; } 
+    .status-next { background: #eff6ff; border-color: #bfdbfe; } 
+    .status-have { background: #f0fdf4; border-color: #bbf7d0; } 
+    .menu-item-active { background: #ffffff; border-color: #f1f5f9; }
+    .menu-item-done { background: #f8fafc; border-color: #e2e8f0; text-decoration: line-through; color: #94a3b8; }
+    .item-row { transition: all 0.2s ease; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+    .legend-btn { transition: all 0.15s ease; }
+    .legend-btn:active { transform: scale(0.95); }
+    body { box-sizing: border-box; }
+    ::-webkit-scrollbar { width: 0px; background: transparent; }
+  </style>
+ </head>
+ <body class="h-full bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-100">
+  <div id="app" class="h-full w-full overflow-hidden flex flex-col">
+   
+   <header class="bg-white/90 backdrop-blur-md shadow-sm px-4 pt-4 pb-3 border-b border-orange-100 z-20 rounded-b-3xl">
+    <h1 id="main-title" class="text-2xl font-800 text-amber-900 text-center flex items-center justify-center gap-2">🛒 Lista de Compras</h1>
+    <p id="sub-title" class="text-center text-sm text-orange-600 font-600 mt-1">Sincronizada em tempo real</p>
+    
+    <div id="ui-shopping" class="block">
+        <div class="grid grid-cols-3 gap-3 mt-4">
+            <div class="bg-white rounded-2xl p-2 text-center shadow-[0_2px_10px_-3px_rgba(251,146,60,0.2)] border border-orange-50">
+                <div class="text-2xl font-800 text-orange-500" id="stat-need">0</div>
+                <div class="text-[10px] font-700 text-slate-400 uppercase tracking-wide">Comprar</div>
+            </div>
+            <div class="bg-white rounded-2xl p-2 text-center shadow-[0_2px_10px_-3px_rgba(251,146,60,0.2)] border border-orange-50">
+                <div class="text-2xl font-800 text-blue-500" id="stat-next">0</div>
+                <div class="text-[10px] font-700 text-slate-400 uppercase tracking-wide">Próx Sem.</div>
+            </div>
+            <div class="bg-white rounded-2xl p-2 text-center shadow-[0_2px_10px_-3px_rgba(251,146,60,0.2)] border border-orange-50">
+                <div class="text-2xl font-800 text-green-500" id="stat-have">0</div>
+                <div class="text-[10px] font-700 text-slate-400 uppercase tracking-wide">Em Casa</div>
+            </div>
+        </div>
+
+        <div class="mt-4 bg-white p-2 rounded-2xl shadow-sm border border-orange-100 flex gap-2">
+            <input type="text" id="new-item-name" placeholder="Nome do item..." class="flex-1 px-2 py-1 text-sm outline-none text-slate-700 bg-transparent placeholder-slate-400">
+            <select id="new-item-category" class="border-l border-slate-200 px-2 py-1 text-sm outline-none bg-transparent text-slate-500 max-w-[100px]"></select>
+            <button onclick="addNewItem()" class="bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-orange-600 active:scale-95 transition-all shadow-sm flex items-center gap-1">+ Add</button>
+        </div>
+
+        <div class="flex justify-center gap-2 mt-4 flex-wrap pb-1">
+            <button onclick="setFilter('all')" class="legend-btn px-4 py-1.5 rounded-full text-xs font-700 bg-slate-100 text-slate-500 hover:bg-slate-200"> Mostrar Tudo </button> 
+            <button onclick="setFilter('need')" class="legend-btn px-4 py-1.5 rounded-full text-xs font-700 bg-amber-100 text-amber-700 hover:bg-amber-200"> 🟡 Só Comprar </button> 
+        </div>
+    </div>
+
+    <div id="ui-menu" class="hidden mt-4">
+        <div class="bg-white p-2 rounded-2xl shadow-sm border border-orange-100 flex gap-2">
+            <input type="text" id="new-menu-name" placeholder="Nova ideia de prato..." class="flex-1 px-2 py-1 text-sm outline-none text-slate-700 bg-transparent placeholder-slate-400">
+            <select id="new-menu-category" class="border-l border-slate-200 px-2 py-1 text-sm outline-none bg-transparent text-slate-500 max-w-[100px]"></select>
+            <button onclick="addNewMenuItem()" class="bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-orange-600 active:scale-95 transition-all shadow-sm">+ Add</button>
+        </div>
+    </div>
+   </header>
+
+   <main id="view-shopping" class="flex-1 overflow-auto px-4 py-4 pb-24 block"><div id="list-container" class="max-w-lg mx-auto"></div></main>
+   <main id="view-menu" class="flex-1 overflow-auto px-4 py-4 pb-24 hidden"><div id="menu-container" class="max-w-lg mx-auto"></div></main>
+
+   <div id="fab-clear" class="fixed bottom-20 right-4 flex gap-2 z-40 block">
+       <button onclick="clearAll(event)" class="w-12 h-12 rounded-full bg-red-400 text-white shadow-lg flex items-center justify-center text-xl hover:bg-red-500 active:scale-95 transition-all" title="Limpar tudo"> 🗑️ </button>
+   </div>
+
+   <nav class="fixed bottom-0 w-full bg-white border-t border-slate-100 flex justify-around z-50 rounded-t-3xl shadow-[0_-10px_20px_-5px_rgba(0,0,0,0.05)] pb-safe">
+       <button onclick="switchView('shopping')" id="nav-shopping" class="flex-1 py-4 text-orange-600 font-800 flex justify-center items-center gap-2 transition-all relative">
+           <span class="text-2xl">🛒</span> Compras
+           <div id="nav-indicator-shop" class="absolute bottom-2 w-12 h-1 bg-orange-500 rounded-full"></div>
+       </button>
+       <button onclick="switchView('menu')" id="nav-menu" class="flex-1 py-4 text-slate-400 font-600 hover:text-orange-400 flex justify-center items-center gap-2 transition-all relative">
+           <span class="text-2xl opacity-70">🍽️</span> Cardápio
+           <div id="nav-indicator-menu" class="absolute bottom-2 w-12 h-1 bg-orange-500 rounded-full hidden"></div>
+       </button>
+   </nav>
+  </div>
+
+  <script>
+    // ==========================================
+    // CHAVES DO FIREBASE DA MAYRA 
+    // ==========================================
+    const firebaseConfig = {
+      apiKey: "AIzaSyCM7UJj4J261q343rU1o7dfyJRG8ycfalI",
+      authDomain: "despensa-tpm.firebaseapp.com",
+      projectId: "despensa-tpm",
+      storageBucket: "despensa-tpm.firebasestorage.app",
+      messagingSenderId: "754923333619",
+      appId: "1:754923333619:web:8e35683e54b5a2f2145486",
+      measurementId: "G-D99V61KRGE",
+      databaseURL: "https://despensa-tpm-default-rtdb.firebaseio.com"
+    };
+
+    // Inicializa o Firebase
+    if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+    const db = firebase.database();
+
+    // ==========================================
+    // DADOS 
+    // ==========================================
+    const categories = [
+      { id: "proteinas", name: "🥩 Proteínas", items: ["Ovos", "Frango Filés (peito)", "Frango sobrecoxa sem osso", "Frango desfiado", "Peixe Filé de pescada branca", "Peixe Tilápia", "Peixe Salmão", "Peixe Atum em conserva", "Sardinha", "Carne Patinho moído", "Carne Bife de alcatra", "Carne Músculo", "Carne Bovina Filé Mignon", "Carne Suína Filé mignon suíno", "Carne Suína Lombo", "Peito de peru defumado", "Bacon em tiras", "Bacon em cubos", "Kani", "Camarão", "Kit Pareja", "Linguiça", "Salmão defumado", "Fígado"] },
+      { id: "folhas", name: "🥬 Hortifruti (Folhas)", items: ["Alface (americana, roxa, crespa)", "Rúcula", "Couve-manteiga", "Espinafre", "Manjericão fresco", "Hortelã", "Capim cidreira"] },
+      { id: "legumes", name: "🥕 Legumes", items: ["Abobrinha", "Abóbora cabotiá", "Berinjela", "Brócolis", "Couve-flor", "Batata inglesa", "Batata-doce", "Mandioquinha", "Mandioca", "Tomate", "Tomatinho", "Pepino", "Cenoura", "Beterraba", "Cebola branca", "Cebola roxa", "Gengibre fresco", "Pimenta dedo-de-moça", "Cogumelos (shimeji ou shitake)", "Alho poró", "Pimentão vermelho", "Quiabo"] },
+      { id: "frutas", name: "🍎 Frutas", items: ["Abacaxi", "Banana", "Mamão", "Morango", "Maçã", "Pera", "Uva", "Manga", "Melão", "Melancia", "Figo", "Laranja", "Limão", "Abacate", "Mexerica", "Jaca"] },
+      { id: "temperos", name: "🧄 Temperos", items: ["Alho", "Salsinha", "Cebolinha", "Alecrim", "Açafrão", "Orégano", "Páprica", "Tomilho"] },
+      { id: "laticinios", name: "🧀 Laticínios", items: ["Queijo Creme de ricota light", "Queijo Cottage", "Queijo Minas frescal", "Queijo Muçarela de búfala", "Queijo Padrão", "Queijo Parmesão (pedaço ou ralado)", "Queijo Gorgonzola", "Iogurte natural desnatado", "Leite desnatado ou sem lactose"] },
+      { id: "oleos_cafe", name: "☕ Óleos e Café", items: ["Azeite extra virgem", "Manteiga", "Molho de tomate", "Creme de leite", "Maionese light", "Café"] },
+      { id: "graos", name: "🌾 Grãos e Cereais", items: ["Arroz integral", "Arroz branco", "Arroz negro", "Feijão", "Grão-de-bico", "Quinoa", "Cuscuz", "Farelo de aveia", "Aveia em flocos", "Tapioca", "Chia", "Macarrão integral", "Massas sem glúten", "Bifum"] },
+      { id: "despensa", name: "🍞 Despensa e Pães", items: ["Pão integral", "Torrada integral", "Pão sírio", "Rap 10", "Bolacha água e sal"] },
+      { id: "castanhas", name: "🥜 Castanhas", items: ["Castanha-do-pará", "Castanha de caju", "Nozes", "Amêndoas", "Amendoim", "Uva-passa", "Tâmara", "Damasco"] },
+      { id: "chas", name: "🍵 Chás", items: ["Preto", "Hibisco", "Cavalinha", "Capim-cidreira", "Camomila", "Erva-doce"] },
+      { id: "condimentos", name: "🍯 Condimentos", items: ["Mel", "Adoçante", "Shoyu light", "Mostarda amarela", "Vinagre de maçã", "Cacau em pó 100%", "Chocolate 70% cacau", "Geleia sem açúcar", "Azeitonas", "Gelatina light ou zero", "Paçoquita sem açúcar", "Flormel", "Tomate seco", "Farelo de berinjela", "Farelo de Maracujá"] },
+      { id: "outros", name: "🐈 Casa e Pets", items: ["Ração gata", "Ração Loro", "Areia gata", "Pilhas", "Pilhas aparelho"] },
+      { id: "higiene", name: "🧻 Higiene", items: ["Papel Higiênico", "Sabonete", "Pasta de dente", "Desodorante", "Cotonetes"] }
+    ];
+
+    const menuCategories = [
+        { id: "sanduiches", name: "🥪 Inspirações Sanduíche", items: ["Sanduíche de lombo, alho poró e barbecue", "Presunto, queijo e geleia de cebola", "Salame, ricota e figo", "Salmão, beterraba, tomate e limão", "Salmão defumado e cream cheese", "Gorgonzola, bacon e tomate", "Parma, búfala e tomatinho", "Atum, maionese e milho verde", "Lombo, tomate seco e pesto"] },
+        { id: "sucos", name: "🥤 Sucos Detox", items: ["Suco verde clássico"] },
+        { id: "refeicoes", name: "🍲 Almoço e Jantar", items: ["Creme de Espinafre", "Sopa de tomate", "Creme de couve flor"] }
+    ];
+
+    let itemStatuses = new Map(); 
+    let menuStatuses = new Map(); 
+    let currentFilter = 'all';
+    let categoryCollapsed = {}; 
+    let menuCollapsed = {};
+
+    function generateItemId(categoryId, itemName) { return `shop_${categoryId}_${itemName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`; }
+    function generateMenuId(categoryId, itemName) { return `menu_${categoryId}_${itemName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`; }
+
+    function switchView(view) {
+        const isShop = view === 'shopping';
+        document.getElementById('view-shopping').classList.toggle('hidden', !isShop);
+        document.getElementById('view-shopping').classList.toggle('block', isShop);
+        document.getElementById('ui-shopping').classList.toggle('hidden', !isShop);
+        document.getElementById('ui-shopping').classList.toggle('block', isShop);
+        document.getElementById('fab-clear').classList.toggle('hidden', !isShop);
+        document.getElementById('fab-clear').classList.toggle('block', isShop);
+        document.getElementById('view-menu').classList.toggle('hidden', isShop);
+        document.getElementById('view-menu').classList.toggle('block', !isShop);
+        document.getElementById('ui-menu').classList.toggle('hidden', isShop);
+        document.getElementById('ui-menu').classList.toggle('block', !isShop);
+        document.getElementById('main-title').innerHTML = isShop ? '🛒 Lista de Compras' : '🍽️ Cardápio da Semana';
+        document.getElementById('sub-title').textContent = isShop ? 'Sincronizada em tempo real' : 'Ideias e sugestões para cozinhar';
+        document.getElementById('nav-shopping').className = isShop ? "flex-1 py-4 text-orange-600 font-800 flex justify-center items-center gap-2 transition-all relative" : "flex-1 py-4 text-slate-400 font-600 hover:text-orange-400 flex justify-center items-center gap-2 transition-all relative";
+        document.getElementById('nav-menu').className = !isShop ? "flex-1 py-4 text-orange-600 font-800 flex justify-center items-center gap-2 transition-all relative" : "flex-1 py-4 text-slate-400 font-600 hover:text-orange-400 flex justify-center items-center gap-2 transition-all relative";
+        document.getElementById('nav-indicator-shop').classList.toggle('hidden', !isShop);
+        document.getElementById('nav-indicator-menu').classList.toggle('hidden', isShop);
+        document.querySelector('#nav-shopping span').style.opacity = isShop ? '1' : '0.7';
+        document.querySelector('#nav-menu span').style.opacity = !isShop ? '1' : '0.7';
+    }
+
+    function toggleCategory(catId) { categoryCollapsed[catId] = !categoryCollapsed[catId]; renderShopList(); }
+    function toggleMenuCategory(catId) { menuCollapsed[catId] = !menuCollapsed[catId]; renderMenu(); }
+
+    // ==========================================
+    // SINCRONIZAÇÃO COM FIREBASE (TEMPO REAL)
+    // ==========================================
+    function initFirebaseListeners() {
+        db.ref('compras').on('value', (snapshot) => {
+            itemStatuses.clear();
+            const data = snapshot.val() || {};
+            Object.keys(data).forEach(key => itemStatuses.set(key, { status: data[key] }));
+            renderShopList();
+            updateStats();
+        });
+
+        db.ref('customItems').on('value', (snapshot) => {
+            const data = snapshot.val() || {};
+            categories.forEach(cat => {
+                if (data[cat.id]) {
+                    data[cat.id].forEach(i => { if (!cat.items.includes(i)) cat.items.push(i); });
+                }
+            });
+            renderShopList();
+        });
+
+        db.ref('cardapio').on('value', (snapshot) => {
+            menuStatuses.clear();
+            const data = snapshot.val() || {};
+            Object.keys(data).forEach(key => menuStatuses.set(key, data[key]));
+            renderMenu();
+        });
+
+        db.ref('customMenu').on('value', (snapshot) => {
+            const data = snapshot.val() || {};
+            menuCategories.forEach(cat => {
+                if (data[cat.id]) {
+                    data[cat.id].forEach(i => { if (!cat.items.includes(i)) cat.items.push(i); });
+                }
+            });
+            renderMenu();
+        });
+    }
+
+    function populateSelects() {
+      const selShop = document.getElementById('new-item-category');
+      categories.forEach(c => selShop.add(new Option(c.name.replace(/[^a-zA-ZÀ-ÿ\s,]/g, '').trim(), c.id)));
+      const selMenu = document.getElementById('new-menu-category');
+      menuCategories.forEach(c => selMenu.add(new Option(c.name.replace(/[^a-zA-ZÀ-ÿ\s,]/g, '').trim(), c.id)));
+    }
+
+    function init() {
+      populateSelects();
+      initFirebaseListeners(); // Inicia a conexão
+      document.getElementById('new-item-name').addEventListener('keypress', e => { if (e.key === 'Enter') addNewItem(); });
+      document.getElementById('new-menu-name').addEventListener('keypress', e => { if (e.key === 'Enter') addNewMenuItem(); });
+    }
+
+    // ==========================================
+    // FUNÇÕES DA LISTA E CARDÁPIO
+    // ==========================================
+    function addNewItem() {
+      const input = document.getElementById('new-item-name'); const catId = document.getElementById('new-item-category').value; const itemName = input.value.trim();
+      if (!itemName) return;
+      const category = categories.find(c => c.id === catId);
+      if (category && !category.items.includes(itemName)) {
+        category.items.push(itemName); 
+        db.ref(`customItems/${catId}`).once('value', snapshot => {
+            let list = snapshot.val() || [];
+            if(!list.includes(itemName)) { list.push(itemName); db.ref(`customItems/${catId}`).set(list); }
+        });
+        const itemId = generateItemId(catId, itemName);
+        db.ref(`compras/${itemId}`).set('need'); 
+        categoryCollapsed[catId] = false; 
+        input.value = ''; 
+      }
+    }
+
+    function cycleStatus(itemId) {
+      const current = (itemStatuses.get(itemId) || {}).status || 'none';
+      const order = ['none', 'need', 'next', 'have'];
+      const next = order[(order.indexOf(current) + 1) % order.length];
+      if (next === 'none') { db.ref(`compras/${itemId}`).remove(); } else { db.ref(`compras/${itemId}`).set(next); }
+    }
+
+    function setFilter(filter) { currentFilter = filter; renderShopList(); }
+
+    function renderShopList() {
+      const container = document.getElementById('list-container'); let html = '';
+      categories.forEach(category => {
+        const filtered = category.items.filter(item => {
+          const status = (itemStatuses.get(generateItemId(category.id, item)) || {}).status || 'none';
+          return currentFilter === 'all' || status === currentFilter;
+        });
+        if (filtered.length === 0) return;
+
+        const isCollapsed = categoryCollapsed[category.id] || false;
+        const arrow = isCollapsed ? '▼' : '▲';
+        const displayClass = isCollapsed ? 'hidden' : 'block';
+
+        html += `<div class="mb-4 bg-white rounded-3xl p-1 shadow-sm border border-orange-50/50"><div onclick="toggleCategory('${category.id}')" class="flex justify-between items-center px-4 py-3 rounded-2xl cursor-pointer active:bg-orange-50 transition-colors"><h2 class="font-800 text-amber-900 text-[15px]">${category.name}</h2><span class="text-orange-300 text-xs">${arrow}</span></div><div class="space-y-1.5 px-2 pb-2 ${displayClass}">`;
+        
+        filtered.forEach(item => {
+          const itemId = generateItemId(category.id, item);
+          const status = (itemStatuses.get(itemId) || {}).status || 'none';
+          const icons = { 'none': '○', 'need': '🟡', 'next': '📅', 'have': '✅' }; 
+          html += `<div data-shop-id="${itemId}" onclick="cycleStatus('${itemId}')" class="item-row status-${status} flex items-center gap-3 px-4 py-3 rounded-2xl border-2 cursor-pointer active:scale-[0.98] select-none"><span class="status-icon text-lg drop-shadow-sm">${icons[status]}</span><span class="flex-1 text-[15px] font-600 text-slate-700">${item}</span></div>`;
+        });
+        html += `</div></div>`;
+      });
+      container.innerHTML = html || `<div class="text-center py-12 text-slate-400"><p class="text-5xl mb-3 opacity-50">🔍</p><p class="text-sm font-600">Nenhum item encontrado</p></div>`;
+    }
+
+    function updateStats() {
+      let need = 0, next = 0, have = 0;
+      itemStatuses.forEach(d => { if (d.status === 'need') need++; if (d.status === 'next') next++; if (d.status === 'have') have++; });
+      document.getElementById('stat-need').textContent = need;
+      document.getElementById('stat-next').textContent = next;
+      document.getElementById('stat-have').textContent = have;
+    }
+
+    function clearAll(event) {
+      const btn = event.target.closest('button');
+      if (btn.dataset.confirming) {
+        db.ref('compras').remove(); 
+        btn.innerHTML = '🗑️'; btn.classList.replace('bg-green-500', 'bg-red-400'); delete btn.dataset.confirming;
+      } else {
+        btn.dataset.confirming = 'true'; btn.innerHTML = '✓'; btn.classList.replace('bg-red-400', 'bg-green-500');
+        setTimeout(() => { if (btn.dataset.confirming) { delete btn.dataset.confirming; btn.innerHTML = '🗑️'; btn.classList.replace('bg-green-500', 'bg-red-400'); } }, 3000);
+      }
+    }
+
+    function addNewMenuItem() {
+      const input = document.getElementById('new-menu-name'); const catId = document.getElementById('new-menu-category').value; const itemName = input.value.trim();
+      if (!itemName) return;
+      const category = menuCategories.find(c => c.id === catId);
+      if (category && !category.items.includes(itemName)) {
+        category.items.push(itemName); 
+        db.ref(`customMenu/${catId}`).once('value', snapshot => {
+            let list = snapshot.val() || [];
+            if(!list.includes(itemName)) { list.push(itemName); db.ref(`customMenu/${catId}`).set(list); }
+        });
+        menuCollapsed[catId] = false; input.value = '';
+      }
+    }
+
+    function toggleMenuStatus(menuId) {
+        const current = menuStatuses.get(menuId) || false;
+        db.ref(`cardapio/${menuId}`).set(!current); 
+    }
+
+    function renderMenu() {
+      const container = document.getElementById('menu-container'); let html = '';
+      menuCategories.forEach(category => {
+        if (category.items.length === 0) return;
+        const isCollapsed = menuCollapsed[category.id] || false;
+        const arrow = isCollapsed ? '▼' : '▲';
+        const displayClass = isCollapsed ? 'hidden' : 'block';
+
+        html += `<div class="mb-5 bg-white rounded-3xl p-1 shadow-sm border border-orange-50/50"><div onclick="toggleMenuCategory('${category.id}')" class="flex justify-between items-center px-4 py-3 rounded-2xl cursor-pointer active:bg-orange-50 transition-colors"><h2 class="font-800 text-amber-900 text-[15px]">${category.name}</h2><span class="text-orange-300 text-xs">${arrow}</span></div><div class="space-y-2 px-2 pb-2 ${displayClass}">`;
+        
+        category.items.forEach(item => {
+          const menuId = generateMenuId(category.id, item); const isDone = menuStatuses.get(menuId) || false;
+          const rowClass = isDone ? 'menu-item-done' : 'menu-item-active'; const icon = isDone ? '✔️' : '🍴';
+          html += `<div onclick="toggleMenuStatus('${menuId}')" class="${rowClass} flex items-center gap-3 px-4 py-3 rounded-2xl border-2 cursor-pointer active:scale-[0.98] select-none transition-all shadow-sm"><span class="text-lg opacity-80">${icon}</span><span class="flex-1 text-[15px] font-700">${item}</span></div>`;
+        });
+        html += `</div></div>`;
+      });
+      container.innerHTML = html;
+    }
+
+    init();
+  </script>
+ </body>
+</html>

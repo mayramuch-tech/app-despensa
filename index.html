@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Despensa & Cardápio</title>
+  
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23f97316'/><text y='72' x='12' font-size='75'>🛒</text></svg>">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23f97316'/><text y='72' x='12' font-size='75'>🛒</text></svg>">
+
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
   
@@ -12,59 +16,61 @@
 
   <style>
     * { font-family: 'Nunito', sans-serif; }
-    .status-none { background: #ffffff; border-color: #f1f5f9; }
-    .status-need { background: #fffbeb; border-color: #fde68a; } 
-    .status-next { background: #eff6ff; border-color: #bfdbfe; } 
-    .status-have { background: #f0fdf4; border-color: #bbf7d0; } 
-    .menu-item-active { background: #ffffff; border-color: #f1f5f9; }
-    .menu-item-done { background: #f8fafc; border-color: #e2e8f0; text-decoration: line-through; color: #94a3b8; }
-    .item-row { transition: all 0.2s ease; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+    
+    /* PALETA DARK MODE */
+    .status-none { background: #1e293b; border-color: #334155; }
+    .status-need { background: #422006; border-color: #ea580c; } 
+    .menu-item-active { background: #1e293b; border-color: #334155; }
+    .menu-item-done { background: #0f172a; border-color: #1e293b; text-decoration: line-through; color: #475569; }
+    
+    .item-row { transition: all 0.2s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
     .legend-btn { transition: all 0.15s ease; }
     .legend-btn:active { transform: scale(0.95); }
     body { box-sizing: border-box; }
     ::-webkit-scrollbar { width: 0px; background: transparent; }
+    
+    /* Ajuste para inputs no dark mode */
+    input:-webkit-autofill,
+    input:-webkit-autofill:hover, 
+    input:-webkit-autofill:focus, 
+    input:-webkit-autofill:active{
+        -webkit-box-shadow: 0 0 0 30px #1e293b inset !important;
+        -webkit-text-fill-color: #f8fafc !important;
+    }
   </style>
  </head>
- <body class="h-full bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-100">
+ <body class="h-full bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800 text-slate-200">
   <div id="app" class="h-full w-full overflow-hidden flex flex-col">
    
-   <header class="bg-white/90 backdrop-blur-md shadow-sm px-4 pt-4 pb-3 border-b border-orange-100 z-20 rounded-b-3xl">
-    <h1 id="main-title" class="text-2xl font-800 text-amber-900 text-center flex items-center justify-center gap-2">🛒 Lista de Compras</h1>
-    <p id="sub-title" class="text-center text-sm text-orange-600 font-600 mt-1">Sincronizada em tempo real</p>
+   <header class="bg-slate-900/90 backdrop-blur-md shadow-md px-4 pt-4 pb-3 border-b border-slate-700 z-20 rounded-b-3xl">
+    <h1 id="main-title" class="text-2xl font-800 text-orange-400 text-center flex items-center justify-center gap-2">🛒 Lista de Compras</h1>
+    <p id="sub-title" class="text-center text-sm text-orange-300 font-600 mt-1 opacity-80">Sincronizada em tempo real</p>
     
     <div id="ui-shopping" class="block">
-        <div class="grid grid-cols-3 gap-3 mt-4">
-            <div class="bg-white rounded-2xl p-2 text-center shadow-[0_2px_10px_-3px_rgba(251,146,60,0.2)] border border-orange-50">
-                <div class="text-2xl font-800 text-orange-500" id="stat-need">0</div>
-                <div class="text-[10px] font-700 text-slate-400 uppercase tracking-wide">Comprar</div>
-            </div>
-            <div class="bg-white rounded-2xl p-2 text-center shadow-[0_2px_10px_-3px_rgba(251,146,60,0.2)] border border-orange-50">
-                <div class="text-2xl font-800 text-blue-500" id="stat-next">0</div>
-                <div class="text-[10px] font-700 text-slate-400 uppercase tracking-wide">Próx Sem.</div>
-            </div>
-            <div class="bg-white rounded-2xl p-2 text-center shadow-[0_2px_10px_-3px_rgba(251,146,60,0.2)] border border-orange-50">
-                <div class="text-2xl font-800 text-green-500" id="stat-have">0</div>
-                <div class="text-[10px] font-700 text-slate-400 uppercase tracking-wide">Em Casa</div>
+        <div class="flex justify-center mt-4">
+            <div class="bg-slate-800 rounded-2xl p-2 px-8 text-center shadow-[0_4px_15px_-3px_rgba(0,0,0,0.5)] border border-slate-700 min-w-[150px]">
+                <div class="text-3xl font-800 text-orange-500" id="stat-need">0</div>
+                <div class="text-[11px] font-700 text-slate-400 uppercase tracking-wide mt-1">Comprar</div>
             </div>
         </div>
 
-        <div class="mt-4 bg-white p-2 rounded-2xl shadow-sm border border-orange-100 flex gap-2">
-            <input type="text" id="new-item-name" placeholder="Nome do item..." class="flex-1 px-2 py-1 text-sm outline-none text-slate-700 bg-transparent placeholder-slate-400">
-            <select id="new-item-category" class="border-l border-slate-200 px-2 py-1 text-sm outline-none bg-transparent text-slate-500 max-w-[100px]"></select>
-            <button onclick="addNewItem()" class="bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-orange-600 active:scale-95 transition-all shadow-sm flex items-center gap-1">+ Add</button>
+        <div class="mt-4 bg-slate-800 p-2 rounded-2xl shadow-sm border border-slate-700 flex gap-2">
+            <input type="text" id="new-item-name" placeholder="Nome do item..." class="flex-1 px-2 py-1 text-sm outline-none text-slate-200 bg-transparent placeholder-slate-500">
+            <select id="new-item-category" class="border-l border-slate-600 px-2 py-1 text-sm outline-none bg-slate-800 text-slate-400 max-w-[100px]"></select>
+            <button onclick="addNewItem()" class="bg-orange-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-orange-500 active:scale-95 transition-all shadow-sm flex items-center gap-1">+ Add</button>
         </div>
 
         <div class="flex justify-center gap-2 mt-4 flex-wrap pb-1">
-            <button onclick="setFilter('all')" class="legend-btn px-4 py-1.5 rounded-full text-xs font-700 bg-slate-100 text-slate-500 hover:bg-slate-200"> Mostrar Tudo </button> 
-            <button onclick="setFilter('need')" class="legend-btn px-4 py-1.5 rounded-full text-xs font-700 bg-amber-100 text-amber-700 hover:bg-amber-200"> 🟡 Só Comprar </button> 
+            <button onclick="setFilter('all')" class="legend-btn px-4 py-1.5 rounded-full text-xs font-700 bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700"> Mostrar Tudo </button> 
+            <button onclick="setFilter('need')" class="legend-btn px-4 py-1.5 rounded-full text-xs font-700 bg-orange-900/50 text-orange-300 hover:bg-orange-800/50 border border-orange-900/50"> 🟡 Só Comprar </button> 
         </div>
     </div>
 
     <div id="ui-menu" class="hidden mt-4">
-        <div class="bg-white p-2 rounded-2xl shadow-sm border border-orange-100 flex gap-2">
-            <input type="text" id="new-menu-name" placeholder="Nova ideia de prato..." class="flex-1 px-2 py-1 text-sm outline-none text-slate-700 bg-transparent placeholder-slate-400">
-            <select id="new-menu-category" class="border-l border-slate-200 px-2 py-1 text-sm outline-none bg-transparent text-slate-500 max-w-[100px]"></select>
-            <button onclick="addNewMenuItem()" class="bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-orange-600 active:scale-95 transition-all shadow-sm">+ Add</button>
+        <div class="bg-slate-800 p-2 rounded-2xl shadow-sm border border-slate-700 flex gap-2">
+            <input type="text" id="new-menu-name" placeholder="Nova ideia de prato..." class="flex-1 px-2 py-1 text-sm outline-none text-slate-200 bg-transparent placeholder-slate-500">
+            <select id="new-menu-category" class="border-l border-slate-600 px-2 py-1 text-sm outline-none bg-slate-800 text-slate-400 max-w-[100px]"></select>
+            <button onclick="addNewMenuItem()" class="bg-orange-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-orange-500 active:scale-95 transition-all shadow-sm">+ Add</button>
         </div>
     </div>
    </header>
@@ -73,15 +79,15 @@
    <main id="view-menu" class="flex-1 overflow-auto px-4 py-4 pb-24 hidden"><div id="menu-container" class="max-w-lg mx-auto"></div></main>
 
    <div id="fab-clear" class="fixed bottom-20 right-4 flex gap-2 z-40 block">
-       <button onclick="clearAll(event)" class="w-12 h-12 rounded-full bg-red-400 text-white shadow-lg flex items-center justify-center text-xl hover:bg-red-500 active:scale-95 transition-all" title="Limpar tudo"> 🗑️ </button>
+       <button onclick="clearAll(this)" class="w-12 h-12 rounded-full bg-red-600 text-white shadow-lg flex items-center justify-center text-xl hover:bg-red-500 active:scale-95 transition-all" title="Limpar tudo"> 🗑️ </button>
    </div>
 
-   <nav class="fixed bottom-0 w-full bg-white border-t border-slate-100 flex justify-around z-50 rounded-t-3xl shadow-[0_-10px_20px_-5px_rgba(0,0,0,0.05)] pb-safe">
-       <button onclick="switchView('shopping')" id="nav-shopping" class="flex-1 py-4 text-orange-600 font-800 flex justify-center items-center gap-2 transition-all relative">
+   <nav class="fixed bottom-0 w-full bg-slate-900 border-t border-slate-800 flex justify-around z-50 rounded-t-3xl shadow-[0_-10px_20px_-5px_rgba(0,0,0,0.3)] pb-safe">
+       <button onclick="switchView('shopping')" id="nav-shopping" class="flex-1 py-4 text-orange-500 font-800 flex justify-center items-center gap-2 transition-all relative">
            <span class="text-2xl">🛒</span> Compras
            <div id="nav-indicator-shop" class="absolute bottom-2 w-12 h-1 bg-orange-500 rounded-full"></div>
        </button>
-       <button onclick="switchView('menu')" id="nav-menu" class="flex-1 py-4 text-slate-400 font-600 hover:text-orange-400 flex justify-center items-center gap-2 transition-all relative">
+       <button onclick="switchView('menu')" id="nav-menu" class="flex-1 py-4 text-slate-500 font-600 hover:text-orange-400 flex justify-center items-center gap-2 transition-all relative">
            <span class="text-2xl opacity-70">🍽️</span> Cardápio
            <div id="nav-indicator-menu" class="absolute bottom-2 w-12 h-1 bg-orange-500 rounded-full hidden"></div>
        </button>
@@ -89,9 +95,6 @@
   </div>
 
   <script>
-    // ==========================================
-    // CHAVES DO FIREBASE DA MAYRA 
-    // ==========================================
     const firebaseConfig = {
       apiKey: "AIzaSyCM7UJj4J261q343rU1o7dfyJRG8ycfalI",
       authDomain: "despensa-tpm.firebaseapp.com",
@@ -103,13 +106,9 @@
       databaseURL: "https://despensa-tpm-default-rtdb.firebaseio.com"
     };
 
-    // Inicializa o Firebase
     if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
     const db = firebase.database();
 
-    // ==========================================
-    // DADOS 
-    // ==========================================
     const categories = [
       { id: "proteinas", name: "🥩 Proteínas", items: ["Ovos", "Frango Filés (peito)", "Frango sobrecoxa sem osso", "Frango desfiado", "Peixe Filé de pescada branca", "Peixe Tilápia", "Peixe Salmão", "Peixe Atum em conserva", "Sardinha", "Carne Patinho moído", "Carne Bife de alcatra", "Carne Músculo", "Carne Bovina Filé Mignon", "Carne Suína Filé mignon suíno", "Carne Suína Lombo", "Peito de peru defumado", "Bacon em tiras", "Bacon em cubos", "Kani", "Camarão", "Kit Pareja", "Linguiça", "Salmão defumado", "Fígado"] },
       { id: "folhas", name: "🥬 Hortifruti (Folhas)", items: ["Alface (americana, roxa, crespa)", "Rúcula", "Couve-manteiga", "Espinafre", "Manjericão fresco", "Hortelã", "Capim cidreira"] },
@@ -156,8 +155,8 @@
         document.getElementById('ui-menu').classList.toggle('block', !isShop);
         document.getElementById('main-title').innerHTML = isShop ? '🛒 Lista de Compras' : '🍽️ Cardápio da Semana';
         document.getElementById('sub-title').textContent = isShop ? 'Sincronizada em tempo real' : 'Ideias e sugestões para cozinhar';
-        document.getElementById('nav-shopping').className = isShop ? "flex-1 py-4 text-orange-600 font-800 flex justify-center items-center gap-2 transition-all relative" : "flex-1 py-4 text-slate-400 font-600 hover:text-orange-400 flex justify-center items-center gap-2 transition-all relative";
-        document.getElementById('nav-menu').className = !isShop ? "flex-1 py-4 text-orange-600 font-800 flex justify-center items-center gap-2 transition-all relative" : "flex-1 py-4 text-slate-400 font-600 hover:text-orange-400 flex justify-center items-center gap-2 transition-all relative";
+        document.getElementById('nav-shopping').className = isShop ? "flex-1 py-4 text-orange-500 font-800 flex justify-center items-center gap-2 transition-all relative" : "flex-1 py-4 text-slate-500 font-600 hover:text-orange-400 flex justify-center items-center gap-2 transition-all relative";
+        document.getElementById('nav-menu').className = !isShop ? "flex-1 py-4 text-orange-500 font-800 flex justify-center items-center gap-2 transition-all relative" : "flex-1 py-4 text-slate-500 font-600 hover:text-orange-400 flex justify-center items-center gap-2 transition-all relative";
         document.getElementById('nav-indicator-shop').classList.toggle('hidden', !isShop);
         document.getElementById('nav-indicator-menu').classList.toggle('hidden', isShop);
         document.querySelector('#nav-shopping span').style.opacity = isShop ? '1' : '0.7';
@@ -167,9 +166,6 @@
     function toggleCategory(catId) { categoryCollapsed[catId] = !categoryCollapsed[catId]; renderShopList(); }
     function toggleMenuCategory(catId) { menuCollapsed[catId] = !menuCollapsed[catId]; renderMenu(); }
 
-    // ==========================================
-    // SINCRONIZAÇÃO COM FIREBASE (TEMPO REAL)
-    // ==========================================
     function initFirebaseListeners() {
         db.ref('compras').on('value', (snapshot) => {
             itemStatuses.clear();
@@ -216,14 +212,11 @@
 
     function init() {
       populateSelects();
-      initFirebaseListeners(); // Inicia a conexão
+      initFirebaseListeners();
       document.getElementById('new-item-name').addEventListener('keypress', e => { if (e.key === 'Enter') addNewItem(); });
       document.getElementById('new-menu-name').addEventListener('keypress', e => { if (e.key === 'Enter') addNewMenuItem(); });
     }
 
-    // ==========================================
-    // FUNÇÕES DA LISTA E CARDÁPIO
-    // ==========================================
     function addNewItem() {
       const input = document.getElementById('new-item-name'); const catId = document.getElementById('new-item-category').value; const itemName = input.value.trim();
       if (!itemName) return;
@@ -243,8 +236,12 @@
 
     function cycleStatus(itemId) {
       const current = (itemStatuses.get(itemId) || {}).status || 'none';
-      const order = ['none', 'need', 'next', 'have'];
-      const next = order[(order.indexOf(current) + 1) % order.length];
+      const order = ['none', 'need'];
+      
+      let currentIndex = order.indexOf(current);
+      if (currentIndex === -1) currentIndex = -1; 
+      
+      const next = order[(currentIndex + 1) % order.length];
       if (next === 'none') { db.ref(`compras/${itemId}`).remove(); } else { db.ref(`compras/${itemId}`).set(next); }
     }
 
@@ -263,35 +260,47 @@
         const arrow = isCollapsed ? '▼' : '▲';
         const displayClass = isCollapsed ? 'hidden' : 'block';
 
-        html += `<div class="mb-4 bg-white rounded-3xl p-1 shadow-sm border border-orange-50/50"><div onclick="toggleCategory('${category.id}')" class="flex justify-between items-center px-4 py-3 rounded-2xl cursor-pointer active:bg-orange-50 transition-colors"><h2 class="font-800 text-amber-900 text-[15px]">${category.name}</h2><span class="text-orange-300 text-xs">${arrow}</span></div><div class="space-y-1.5 px-2 pb-2 ${displayClass}">`;
+        html += `<div class="mb-4 bg-slate-800 rounded-3xl p-1 shadow-md border border-slate-700"><div onclick="toggleCategory('${category.id}')" class="flex justify-between items-center px-4 py-3 rounded-2xl cursor-pointer active:bg-slate-700 transition-colors"><h2 class="font-800 text-orange-400 text-[15px]">${category.name}</h2><span class="text-orange-500 text-xs">${arrow}</span></div><div class="space-y-1.5 px-2 pb-2 ${displayClass}">`;
         
         filtered.forEach(item => {
           const itemId = generateItemId(category.id, item);
           const status = (itemStatuses.get(itemId) || {}).status || 'none';
-          const icons = { 'none': '○', 'need': '🟡', 'next': '📅', 'have': '✅' }; 
-          html += `<div data-shop-id="${itemId}" onclick="cycleStatus('${itemId}')" class="item-row status-${status} flex items-center gap-3 px-4 py-3 rounded-2xl border-2 cursor-pointer active:scale-[0.98] select-none"><span class="status-icon text-lg drop-shadow-sm">${icons[status]}</span><span class="flex-1 text-[15px] font-600 text-slate-700">${item}</span></div>`;
+          const visualStatus = (status === 'have' || status === 'next') ? 'none' : status;
+          const icons = { 'none': '○', 'need': '🟡' }; 
+          
+          html += `<div data-shop-id="${itemId}" onclick="cycleStatus('${itemId}')" class="item-row status-${visualStatus} flex items-center gap-3 px-4 py-3 rounded-2xl border cursor-pointer active:scale-[0.98] select-none"><span class="status-icon text-lg drop-shadow-md">${icons[visualStatus]}</span><span class="flex-1 text-[15px] font-600 text-slate-200">${item}</span></div>`;
         });
         html += `</div></div>`;
       });
-      container.innerHTML = html || `<div class="text-center py-12 text-slate-400"><p class="text-5xl mb-3 opacity-50">🔍</p><p class="text-sm font-600">Nenhum item encontrado</p></div>`;
+      container.innerHTML = html || `<div class="text-center py-12 text-slate-500"><p class="text-5xl mb-3 opacity-30">🔍</p><p class="text-sm font-600">Nenhum item encontrado</p></div>`;
     }
 
     function updateStats() {
-      let need = 0, next = 0, have = 0;
-      itemStatuses.forEach(d => { if (d.status === 'need') need++; if (d.status === 'next') next++; if (d.status === 'have') have++; });
+      let need = 0;
+      itemStatuses.forEach(d => { if (d.status === 'need') need++; });
       document.getElementById('stat-need').textContent = need;
-      document.getElementById('stat-next').textContent = next;
-      document.getElementById('stat-have').textContent = have;
     }
 
-    function clearAll(event) {
-      const btn = event.target.closest('button');
+    function clearAll(btn) {
       if (btn.dataset.confirming) {
         db.ref('compras').remove(); 
-        btn.innerHTML = '🗑️'; btn.classList.replace('bg-green-500', 'bg-red-400'); delete btn.dataset.confirming;
+        btn.innerHTML = '🗑️'; 
+        btn.classList.remove('bg-green-600'); 
+        btn.classList.add('bg-red-600'); 
+        delete btn.dataset.confirming;
       } else {
-        btn.dataset.confirming = 'true'; btn.innerHTML = '✓'; btn.classList.replace('bg-red-400', 'bg-green-500');
-        setTimeout(() => { if (btn.dataset.confirming) { delete btn.dataset.confirming; btn.innerHTML = '🗑️'; btn.classList.replace('bg-green-500', 'bg-red-400'); } }, 3000);
+        btn.dataset.confirming = 'true'; 
+        btn.innerHTML = '✓'; 
+        btn.classList.remove('bg-red-600'); 
+        btn.classList.add('bg-green-600');
+        setTimeout(() => { 
+          if (btn.dataset.confirming) { 
+            delete btn.dataset.confirming; 
+            btn.innerHTML = '🗑️'; 
+            btn.classList.remove('bg-green-600'); 
+            btn.classList.add('bg-red-600'); 
+          } 
+        }, 3000);
       }
     }
 
@@ -322,12 +331,12 @@
         const arrow = isCollapsed ? '▼' : '▲';
         const displayClass = isCollapsed ? 'hidden' : 'block';
 
-        html += `<div class="mb-5 bg-white rounded-3xl p-1 shadow-sm border border-orange-50/50"><div onclick="toggleMenuCategory('${category.id}')" class="flex justify-between items-center px-4 py-3 rounded-2xl cursor-pointer active:bg-orange-50 transition-colors"><h2 class="font-800 text-amber-900 text-[15px]">${category.name}</h2><span class="text-orange-300 text-xs">${arrow}</span></div><div class="space-y-2 px-2 pb-2 ${displayClass}">`;
+        html += `<div class="mb-5 bg-slate-800 rounded-3xl p-1 shadow-md border border-slate-700"><div onclick="toggleMenuCategory('${category.id}')" class="flex justify-between items-center px-4 py-3 rounded-2xl cursor-pointer active:bg-slate-700 transition-colors"><h2 class="font-800 text-orange-400 text-[15px]">${category.name}</h2><span class="text-orange-500 text-xs">${arrow}</span></div><div class="space-y-2 px-2 pb-2 ${displayClass}">`;
         
         category.items.forEach(item => {
           const menuId = generateMenuId(category.id, item); const isDone = menuStatuses.get(menuId) || false;
           const rowClass = isDone ? 'menu-item-done' : 'menu-item-active'; const icon = isDone ? '✔️' : '🍴';
-          html += `<div onclick="toggleMenuStatus('${menuId}')" class="${rowClass} flex items-center gap-3 px-4 py-3 rounded-2xl border-2 cursor-pointer active:scale-[0.98] select-none transition-all shadow-sm"><span class="text-lg opacity-80">${icon}</span><span class="flex-1 text-[15px] font-700">${item}</span></div>`;
+          html += `<div onclick="toggleMenuStatus('${menuId}')" class="${rowClass} flex items-center gap-3 px-4 py-3 rounded-2xl border cursor-pointer active:scale-[0.98] select-none transition-all shadow-sm"><span class="text-lg opacity-80">${icon}</span><span class="flex-1 text-[15px] font-700 text-slate-200">${item}</span></div>`;
         });
         html += `</div></div>`;
       });
@@ -338,3 +347,4 @@
   </script>
  </body>
 </html>
+

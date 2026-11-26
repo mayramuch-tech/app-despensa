@@ -1,6 +1,6 @@
 /**
  * Motor da cadência. Roda a cada hora (gatilho) ou pelo menu.
- * Ordem: Bling → inicializa novos → regras de parada (Agenda / e-mail) → executa passos vencidos.
+ * Ordem: Bling → Wix (carrinhos) → inicializa novos → regras de parada (Agenda / e-mail) → executa passos vencidos.
  */
 
 function processarCadencias() {
@@ -9,7 +9,7 @@ function processarCadencias() {
   try {
     _configCache = null;
     const agora = new Date();
-    const resumo = { inscritos: 0, emails: 0, wpp: 0, tarefas: 0, encerrados: 0, erros: 0 };
+    const resumo = { carrinhos: 0, inscritos: 0, emails: 0, wpp: 0, tarefas: 0, encerrados: 0, erros: 0 };
 
     // 1) Bling
     if (cfgSim_('BLING_SINCRONIZAR') && props_().getProperty('BLING_REFRESH_TOKEN')) {
@@ -20,6 +20,18 @@ function processarCadencias() {
       } catch (e) {
         resumo.erros++;
         log_('', 'ERRO_BLING', e.message);
+      }
+    }
+
+    // 1b) Wix — carrinhos abandonados
+    if (cfgSim_('WIX_SINCRONIZAR') && wixConfigurado_()) {
+      try {
+        const tabWix = lerTabela_(ABA.CONTATOS);
+        resumo.carrinhos = sincronizarWix_(tabWix);
+        gravarTabela_(tabWix);
+      } catch (e) {
+        resumo.erros++;
+        log_('', 'ERRO_WIX', e.message);
       }
     }
 

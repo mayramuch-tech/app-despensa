@@ -13,6 +13,10 @@ function onOpen() {
       .addItem('Autorizar / reconectar', 'autorizarBling')
       .addItem('Testar conexão', 'testarBling')
       .addItem('Listar situações (IDs)', 'listarSituacoesBling'))
+    .addSubMenu(SpreadsheetApp.getUi().createMenu('🛒 Wix (carrinhos)')
+      .addItem('Configurar API key', 'configurarWix')
+      .addItem('Testar conexão', 'testarWix')
+      .addItem('Importar carrinhos agora', 'importarCarrinhosWix'))
     .addSubMenu(SpreadsheetApp.getUi().createMenu('🛠️ Instalação')
       .addItem('1. Instalar planilha', 'instalarPlanilha')
       .addItem('2. Testar e-mail UOL', 'testarEmail')
@@ -26,7 +30,7 @@ function menuProcessar() {
   if (!r) return;
   const fora = dentroDoHorario_(new Date()) ? '' : '\n\n⚠️ Fora do horário de envio: só sincronizou e verificou paradas.';
   SpreadsheetApp.getUi().alert('Ciclo concluído:\n\n' +
-    '• Novos do Bling: ' + r.inscritos + '\n• E-mails: ' + r.emails + '\n• WhatsApp na fila: ' + r.wpp +
+    '• Novos do Bling: ' + r.inscritos + '\n• Carrinhos do Wix: ' + r.carrinhos + '\n• E-mails: ' + r.emails + '\n• WhatsApp na fila: ' + r.wpp +
     '\n• Tarefas na Agenda: ' + r.tarefas + '\n• Encerrados: ' + r.encerrados + '\n• Erros: ' + r.erros + fora);
 }
 

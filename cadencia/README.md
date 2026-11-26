@@ -1,12 +1,14 @@
-# Cadência Integrada: Google Agenda × WhatsApp Business × Bling × E-mail UOL
+# Cadência Integrada: Google Agenda × WhatsApp Business × Bling × Wix × E-mail UOL
 
-Motor de cadência em **Google Apps Script**. Uma **planilha Google** funciona como painel. Três fluxos vêm prontos:
+Motor de cadência em **Google Apps Script**. Uma **planilha Google** funciona como painel. Cinco fluxos vêm prontos:
 
 | Cadência | Origem | Gatilho de entrada | Encerra quando |
 |---|---|---|---|
 | `POS_VENDA` | Bling: pedidos de venda | Pedido nas situações de entrada (padrão 6, 9 ou 15) | Pedido cancelado (12) ou fim dos passos |
 | `PROSPECCAO_B2B` | Linha digitada na aba **Contatos** | Linha nova sem Status | Reunião na Agenda, resposta por e-mail, pausa ou fim dos passos |
 | `PROPOSTA` | Bling: propostas comerciais | Proposta nova (exceto Rascunho) | Proposta Aprovada/Concluída (**GANHO**) ou Não aprovada (**PERDIDO**) |
+| `CARRINHO_ABANDONADO` | Wix: carrinhos abandonados | Carrinho aberto há mais de 60 min e menos de 7 dias | Carrinho recuperado no Wix (**GANHO**) ou fim dos passos |
+| `CARRINHO_RETOMADA` | Wix: carrinhos abandonados antigos | Carrinho aberto há mais de 7 dias (varre até 60 dias para trás) | Carrinho recuperado no Wix (**GANHO**) ou fim dos passos |
 
 ## Como cada canal funciona
 
@@ -26,7 +28,7 @@ O motor roda **a cada 1 h**. Os envios acontecem só dentro do horário comercia
 ### 1. Planilha e script
 1. Crie uma planilha nova no Google Sheets, por exemplo **"Cadência OxHydro"**.
 2. Abra **Extensões ▸ Apps Script**.
-3. Crie os arquivos `Config.gs`, `Util.gs`, `Canais.gs`, `Bling.gs`, `Motor.gs` e `Menu.gs` e cole o conteúdo desta pasta.
+3. Crie os arquivos `Config.gs`, `Util.gs`, `Canais.gs`, `Bling.gs`, `Wix.gs`, `Motor.gs` e `Menu.gs` e cole o conteúdo desta pasta.
 4. Em **Configurações do projeto ▸ Mostrar arquivo de manifesto**, substitua o `appsscript.json` pelo desta pasta.
 5. Salve, volte à planilha e recarregue. O menu **⚙️ Cadência** aparece.
 6. Rode **⚙️ Cadência ▸ Instalação ▸ 1. Instalar planilha** e autorize as permissões.
@@ -69,7 +71,22 @@ O Apps Script não abre conexão SMTP direta. Por isso o envio sai pelo Gmail, c
 
 As credenciais e os tokens ficam em *Script Properties*, nunca na planilha. O token é renovado sozinho. Se o Bling ficar mais de 30 dias sem sincronizar, rode **Autorizar / reconectar**.
 
-### 5. Ajustes finais
+### 5. Loja Wix (carrinhos abandonados)
+1. Em **manage.wix.com/account/api-keys**, crie uma API key com a permissão de leitura de pedidos do Wix Stores/eCommerce (*Read Orders*).
+2. Copie o **ID do site**: é o código que aparece na URL do painel (`manage.wix.com/dashboard/<ID-DO-SITE>/...`).
+3. Na planilha, rode **⚙️ Cadência ▸ Wix (carrinhos) ▸ Configurar API key** e cole os dois. O teste mostra quantos carrinhos estão em aberto.
+4. **Importar carrinhos agora** coloca todos os carrinhos dos últimos 60 dias em cadência, inclusive os antigos.
+
+Regras automáticas:
+- Carrinho com menos de `WIX_ESPERA_MIN` (60 min) é ignorado até o próximo ciclo, para dar tempo do cliente concluir sozinho.
+- O mesmo e-mail nunca recebe duas cadências de carrinho ao mesmo tempo.
+- Carrinho sem e-mail e sem telefone é ignorado.
+- E-mail de domínio próprio (ex.: `compras@empresa.com.br`) é tratado como compra B2B: a mensagem oferece orçamento formal e faturamento em CNPJ (variável `{{frase_b2b}}`).
+- Quando o cliente conclui a compra, o Wix marca o carrinho como recuperado e a cadência encerra como **GANHO**.
+
+> Se a loja tiver a automação nativa de carrinho abandonado do Wix ligada, desligue-a ou ajuste os textos para o cliente não receber mensagens repetidas.
+
+### 6. Ajustes finais
 1. Na aba **Config**, preencha `EMAIL_REMETENTE`, `ASSINATURA_HTML`, `EMAIL_RESUMO_DIARIO` e os `VAR_LINK_*`. Para `VAR_LINK_AGENDA`, use a **página de agendamento** do Google Agenda: quando o lead agenda por ela, a cadência para sozinha.
 2. **Instalação ▸ 2. Testar e-mail UOL**.
 3. **Instalação ▸ 3. Ativar automação (gatilhos)**.
@@ -91,6 +108,7 @@ As credenciais e os tokens ficam em *Script Properties*, nunca na planilha. O to
 `{{nome}}` `{{primeiro_nome}}` `{{empresa}}` `{{email}}` `{{telefone}}`
 Pedidos: `{{numero_pedido}}` `{{total}}` `{{data_pedido}}` `{{rastreio}}` (buscado no Bling na hora do envio).
 Propostas: `{{numero_proposta}}` `{{total}}` `{{data_proposta}}`.
+Carrinhos Wix: `{{produtos}}` `{{total}}` (já com R$) `{{link_checkout}}` `{{data_carrinho}}` `{{frase_b2b}}`.
 Toda chave `VAR_XXX` da aba Config vira `{{xxx}}`. Exemplos: `{{link_avaliacao}}`, `{{link_loja}}`, `{{link_agenda}}`, `{{assinatura_wpp}}`.
 
 ### Status do contato
@@ -118,6 +136,8 @@ cadencia/
 ├── Util.gs          planilha, datas/dias úteis, telefone, modelos, log
 ├── Canais.gs        e-mail UOL, fila WhatsApp, Google Agenda
 ├── Bling.gs         OAuth 2.0, API v3, sincronização de pedidos e propostas
+├── Wix.gs           carrinhos abandonados da loja Wix (API key)
 ├── Motor.gs         motor da cadência, gatilho de edição, resumo diário
+├── manual/          gerar_manual.js (regenera o .docx: `node gerar_manual.js`, requer o pacote npm docx)
 └── Menu.gs          menu, gatilhos, ações em contatos selecionados
 ```

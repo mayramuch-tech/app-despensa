@@ -66,6 +66,12 @@ const CONFIG_PADRAO = [
   ['CADENCIA_PEDIDO', 'POS_VENDA', 'Cadência aplicada a pedidos do Bling.'],
   ['CADENCIA_PROPOSTA', 'PROPOSTA', 'Cadência aplicada a propostas comerciais do Bling.'],
   ['CADENCIA_LEAD_PADRAO', 'PROSPECCAO_B2B', 'Cadência para linhas novas em Contatos sem cadência preenchida.'],
+  ['WIX_SINCRONIZAR', 'SIM', 'SIM = importa carrinhos abandonados da loja Wix a cada execução.'],
+  ['WIX_JANELA_DIAS', 60, 'Quantos dias para trás os carrinhos do Wix são varridos (cobre carrinhos antigos).'],
+  ['WIX_ESPERA_MIN', 60, 'Minutos de espera após o abandono antes de iniciar a cadência.'],
+  ['WIX_DIAS_CARRINHO_ANTIGO', 7, 'Carrinhos com mais dias que isso vão para a cadência de retomada.'],
+  ['CADENCIA_CARRINHO', 'CARRINHO_ABANDONADO', 'Cadência para carrinhos abandonados recentes.'],
+  ['CADENCIA_CARRINHO_ANTIGO', 'CARRINHO_RETOMADA', 'Cadência para carrinhos abandonados antigos.'],
   ['VAR_LINK_AVALIACAO', 'https://seusite.com.br/avaliar', 'Variável {{link_avaliacao}} nos modelos.'],
   ['VAR_LINK_LOJA', 'https://seusite.com.br', 'Variável {{link_loja}} nos modelos.'],
   ['VAR_LINK_AGENDA', 'https://calendar.app.google/seu-link', 'Variável {{link_agenda}} (página de agendamento do Google Agenda).'],
@@ -114,10 +120,10 @@ function instalarPlanilha() {
   config.setColumnWidth(1, 260).setColumnWidth(2, 320).setColumnWidth(3, 520);
 
   const cad = garanteAba_(ABA.CADENCIAS, CAB.CADENCIAS);
-  if (cad.getLastRow() < 2) {
-    const modelos = cadenciasModelo_();
-    cad.getRange(2, 1, modelos.length, CAB.CADENCIAS.length).setValues(modelos);
-  }
+  // acrescenta só as cadências-modelo que ainda não existem (preserva textos já editados)
+  const jaExistem = cad.getLastRow() > 1 ? cad.getRange(2, 1, cad.getLastRow() - 1, 1).getValues().map(r => r[0]) : [];
+  const modelos = cadenciasModelo_().filter(m => jaExistem.indexOf(m[0]) < 0);
+  if (modelos.length) cad.getRange(cad.getLastRow() + 1, 1, modelos.length, CAB.CADENCIAS.length).setValues(modelos);
   cad.setColumnWidth(5, 280).setColumnWidth(6, 520);
   cad.getRange('F:F').setWrap(true);
   cad.getRange('D2:D').setDataValidation(SpreadsheetApp.newDataValidation()
@@ -193,5 +199,23 @@ function cadenciasModelo_() {
       'Olá, {{primeiro_nome}}!\n\nSe houver necessidade de ajustar escopo, prazo ou condições de pagamento da proposta nº {{numero_proposta}}, me diga que reviso.'],
     ['PROPOSTA', 5, 15, 'EMAIL', 'Validade da proposta nº {{numero_proposta}}',
       'Olá, {{primeiro_nome}}!\n\nLembrando que a proposta nº {{numero_proposta}} está chegando ao fim da validade. Quer que eu reserve as condições atuais?'],
+
+    // ── CARRINHO ABANDONADO RECENTE (Wix) ────────────────────────────────
+    ['CARRINHO_ABANDONADO', 1, 0, 'EMAIL', '{{primeiro_nome}}, seu carrinho ficou guardado 🛒',
+      'Olá, {{primeiro_nome}}!\n\nVi que você separou {{produtos}} ({{total}}) na loja da OxHydro e não chegou a finalizar.\n\nSeu carrinho continua salvo: {{link_checkout}}\n\nSe ficou alguma dúvida sobre aplicação, dosagem ou frete, é só responder este e-mail. {{frase_b2b}}'],
+    ['CARRINHO_ABANDONADO', 2, 1, 'WHATSAPP', '',
+      'Oi, {{primeiro_nome}}! Aqui é a Mayra, da OxHydro 😊 Vi que ficou no seu carrinho: {{produtos}} ({{total}}). Posso ajudar com alguma dúvida antes de fechar? O link continua ativo: {{link_checkout}} {{frase_b2b}}'],
+    ['CARRINHO_ABANDONADO', 3, 3, 'EMAIL', 'Dúvidas sobre {{produtos}}?',
+      'Olá, {{primeiro_nome}}!\n\nMuitas pessoas param no checkout por uma dúvida técnica simples: como usar, quanto rende, prazo de entrega. Nossa equipe técnica responde direto, sem robô.\n\nSe quiser concluir, seu carrinho está aqui: {{link_checkout}}'],
+    ['CARRINHO_ABANDONADO', 4, 6, 'WHATSAPP', '',
+      '{{primeiro_nome}}, último lembrete do seu carrinho ({{produtos}}). Se não for o momento, sem problema, não vou insistir. Qualquer coisa, estou por aqui! {{assinatura_wpp}}'],
+
+    // ── RETOMADA DE CARRINHO ANTIGO (Wix) ────────────────────────────────
+    ['CARRINHO_RETOMADA', 1, 0, 'WHATSAPP', '',
+      'Oi, {{primeiro_nome}}! Aqui é a Mayra, da OxHydro. No dia {{data_carrinho}} você separou {{produtos}} na nossa loja e acabou não finalizando. Ainda faz sentido para você? Se tiver dúvida técnica ou de frete, posso ajudar por aqui. {{frase_b2b}}'],
+    ['CARRINHO_RETOMADA', 2, 3, 'EMAIL', 'Ainda posso ajudar com {{produtos}}?',
+      'Olá, {{primeiro_nome}}!\n\nRetomando o carrinho que você montou em {{data_carrinho}}: {{produtos}} ({{total}}).\n\nSe ainda tiver interesse, o link é este: {{link_checkout}}\n\nE se a necessidade mudou, me conte o cenário que eu indico a solução mais adequada. {{frase_b2b}}'],
+    ['CARRINHO_RETOMADA', 3, 7, 'WHATSAPP', '',
+      '{{primeiro_nome}}, vou encerrar o acompanhamento do seu carrinho por aqui para não incomodar. Quando precisar, é só chamar! {{assinatura_wpp}}'],
   ];
 }
